@@ -59,9 +59,7 @@ six==1.12.0
 Werkzeug==0.15.6
 WTForms==2.2.1
 xattr==0.6.4
-
 backports-abc
-bdist-mpkg
 beautifulsoup4
 boto
 breadability
