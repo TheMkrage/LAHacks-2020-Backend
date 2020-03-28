@@ -11,3 +11,4 @@ def handle_form():
     data = request.data
     print(data)
     print(request.files)
+    return 'response'
