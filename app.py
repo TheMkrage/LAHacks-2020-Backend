@@ -9,6 +9,5 @@ def hello_world():
 @app.route('/upload', methods=['POST'])
 def handle_form():
     data = request.data
-    print(data)
-    print(request.files)
+    print(request.json)
     return 'response'
