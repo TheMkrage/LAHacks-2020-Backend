@@ -1,5 +1,7 @@
 from flask import Flask
 from flask import request
+import base64
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -10,4 +12,9 @@ def hello_world():
 def handle_form():
     data = request.data
     print(request.json)
+
+    decoded = base64.b64decode(request.json['base'])
+    media_write = open('deer_decode.gif', 'wb')
+    media_write.write(decoded)
+
     return 'response'
