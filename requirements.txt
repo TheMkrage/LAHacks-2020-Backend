@@ -4,7 +4,6 @@ Click==7.0
 enum34==1.1.6
 Flask==1.1.1
 Flask-WTF==0.14.2
-futures==3.2.0
 grpcio==1.22.0
 itsdangerous==1.1.0
 Jinja2==2.10.1
