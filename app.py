@@ -11,10 +11,9 @@ def hello_world():
 @app.route('/upload', methods=['POST'])
 def handle_form():
     data = request.data
-    print(request.json)
 
     decoded = base64.b64decode(request.json['base'])
-    media_write = open('deer_decode.gif', 'wb')
+    media_write = open('test.m4a', 'w')
     media_write.write(decoded)
 
     return 'response'
