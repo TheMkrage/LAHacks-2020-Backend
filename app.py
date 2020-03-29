@@ -1,19 +1,39 @@
 from flask import Flask
 from flask import request
+from flask import jsonify
 import base64
 import subprocess
+from subprocess import check_output
+# from google.cloud import texttospeech
+# from google.cloud import speech_v1
+# from google.cloud.speech_v1 import enums
+import io
 
 from os import environ, path, system
 
 from pocketsphinx.pocketsphinx import *
 from sphinxbase.sphinxbase import *
 import pronouncing
+import json
 
 app = Flask(__name__)
 
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
+
+@app.route('/uploadInterviewFeedback', methods=['POST'])
+def handle_upload_interview_feedback():
+    data = request.data
+    decoded = base64.b64decode(request.json['base'])
+    with open('interviewFeedback.m4a', 'w') as media_write:
+        media_write.write(decoded)
+
+    feedback = ["Your answer is short, try talking for longer!", "You are a little quiet, be sure to speak up to confidently give your answer!"]
+
+    response = {}
+    response["feedback"] = feedback
+    return response
 
 @app.route('/upload', methods=['POST'])
 def handle_form():
@@ -26,9 +46,31 @@ def handle_form():
         media_write.write(decoded)
 
     phonemes = phonemes_for_audio()
-    score = score_for_pronunciation(expected, phonemes)
-    return 'response'
+    lev_score, v_c_score = score_for_pronunciation(expected, phonemes)
+    print(lev_score)
+    print(v_c_score)
 
+    transcribed = subprocess.check_output(["gcloud", "ml", "speech", "recognize", "using.wav", "--language-code=en-US"])
+    output = json.loads(transcribed)
+    gcp_score = 0.0
+    if('results' in output):
+        gcp_score = output["results"][0]['alternatives'][0]['confidence']
+        transcript = output["results"][0]['alternatives'][0]['transcript']
+        if transcript != word:
+            gcp_score = gcp_score / 2.0
+        print(gcp_score)
+        print(transcript)
+
+    score = gcp_score * 0.85 + v_c_score * 0.10 + lev_score * 0.05
+    if gcp_score == 0:
+        score = v_c_score * 0.75 + lev_score * 0.25
+    print(score)
+
+    response = {}
+    response["score"] = score
+    print(expected)
+    response["phonemes"] = " ".join(expected).replace("1", "").replace("0", "").replace("2", "")
+    return jsonify(response)
 
 def score_for_pronunciation(expected, actual):
     def filtering(seg):
@@ -45,23 +87,16 @@ def score_for_pronunciation(expected, actual):
     actual_vowels, actual_cons = get_vowels_and_cons(actual)
 
     v_c_score = abs(expected_vowels-actual_vowels) + abs(expected_cons-actual_cons)
+    lev_scaled = 1.0 - (levenshtein_distance(expected_string, actual_string)/50.0)
+    v_c_scaled = 1.0 - (v_c_score/20.0)
 
-
-    print(expected_string)
-    print(actual_string)
-
-    print(v_c_score)
-    print(levenshtein_distance(expected_string, actual_string))
-
+    return lev_scaled, v_c_scaled
 
 def get_vowels_and_cons(phonemes):
     expected_vowels = 0
     expected_cons = 0
     is_last_vowel = False
-    print(phonemes)
     for phoneme in phonemes:
-        print(phoneme)
-        print(phoneme[0])
         if phoneme[0] in ['A', 'E', 'I', 'O', 'U']:
             expected_vowels += 1
             is_last_vowel = True
